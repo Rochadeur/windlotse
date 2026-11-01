@@ -10,9 +10,12 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#2a64f0">
 <style>
-  :root { --bg:#f6f7f9; --fg:#1b1f24; --muted:#6b7280; --line:#e3e6ea; --card:#fff; --link:#1565c0; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#111418; --fg:#e8eaed; --muted:#9aa0a6; --line:#2a2f36; --card:#181c21; --link:#7fb6ff; } }
-  body { margin:0; font:15px/1.55 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  @font-face { font-family:"Figtree"; font-style:normal; font-weight:400 800; font-display:swap; src:url(fonts/figtree-latin.woff2) format("woff2"); }
+  :root { --bg:#eef3f9; --fg:#0f1d33; --muted:#5f6f86; --line:#e1e8f1; --card:#fff; --link:#1d5fd6;
+          --good-bg:#dcf5e3; --good-fg:#11683a; --mid-bg:#fdf1cc; --mid-fg:#7a5a00; --bad-bg:#eceff3; --bad-fg:#5b6470; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0e141d; --fg:#e6edf7; --muted:#93a1b5; --line:#222d3c; --card:#161e2a; --link:#6ea2ff;
+          --good-bg:#123a26; --good-fg:#7ee2a6; --mid-bg:#3a3112; --mid-fg:#f2d06a; --bad-bg:#222d3c; --bad-fg:#93a1b5; } }
+  body { margin:0; font:15px/1.55 "Figtree", system-ui, sans-serif; background:var(--bg); color:var(--fg); }
   main { max-width:720px; margin:0 auto; padding:16px 16px 48px; }
   header { display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; }
   h1 { font-size:22px; margin:8px 0; }
@@ -26,6 +29,9 @@
   .scale { display:flex; flex-wrap:wrap; border:1px solid var(--line); border-radius:6px; overflow:hidden; margin:8px 0; }
   .scale span { flex:1 0 30px; padding:6px 4px; text-align:center; font-weight:600; color:#111; font-variant-numeric:tabular-nums; }
   .dir svg { width:20px; height:20px; fill:var(--fg); vertical-align:middle; }
+  .rate { font-size:11px; font-weight:700; padding:2px 8px; border-radius:999px; letter-spacing:.03em; text-transform:uppercase; white-space:nowrap; }
+  .rate.good { background:var(--good-bg); color:var(--good-fg); } .rate.mid { background:var(--mid-bg); color:var(--mid-fg); } .rate.bad { background:var(--bad-bg); color:var(--bad-fg); }
+  .sw { display:inline-block; width:22px; height:10px; border-radius:2px; vertical-align:middle; }
 </style>
 </head>
 <body>
@@ -48,6 +54,19 @@
   <tr><th>ECMWF (9 km)</th><td>Globalmodell des Europäischen Zentrums, gilt als eines der besten Modelle für mehrere Tage im Voraus. Reicht 7 Tage in die Zukunft, die ersten Tage stündlich, danach in größeren Abständen.</td></tr>
 </table>
 <p>Faustregel: Für heute und morgen sind ICON-D2 und DMI HARMONIE meist genauer, für die Tage danach nimmst du ICON-EU oder ECMWF. Sagen zwei Modelle ähnliches voraus, ist die Vorhersage sicherer.</p>
+
+<h2>Jetzt-Karte und Tageskarten</h2>
+<p>Ganz oben steht der Wind für die aktuelle Stunde, groß und mit Richtungspfeil, Böen, Temperatur und Wolken. Ist es gerade dunkel, zeigt die Karte die nächste helle Stunde.</p>
+<p>Darunter gibt es für jeden Tag eine kleine Karte: stärkster Wind mit Richtung, ein Mini-Verlauf über den Tag, die stärkste Böe und die beste Zeit zum Kiten. Tippst du eine Tageskarte an, springt die Tabelle (oder auf dem Handy die Liste) zu diesem Tag.</p>
+
+<h2>Kite-Bewertung</h2>
+<p>WindLotse bewertet jede Stunde grob, ob sie sich zum Kiten eignet. Das ist nur eine Faustregel nach Windstärke. Ob es für dich passt, hängt von Kitegröße, Gewicht, Können und Spot ab.</p>
+<table>
+  <tr><th><span class="sw" style="background:#58c98a"></span> <span class="rate good">Gut</span></th><td>12 bis 25 kn Wind und Böen bis 35 kn.</td></tr>
+  <tr><th><span class="sw" style="background:#f0cf5a"></span> <span class="rate mid">Mittel</span></th><td>9 bis 12 kn (großer Kite oder Foil) oder 25 bis 30 kn (kleiner Kite), oder sehr starke Böen.</td></tr>
+  <tr><th><span class="rate bad">Kaum Wind</span></th><td>Unter 9 kn. Bei über 30 kn steht <strong>Zu viel Wind</strong>.</td></tr>
+</table>
+<p>Ein Tag gilt als <span class="rate good">Gut</span>, wenn er mindestens 3 gute Stunden hat, und als <span class="rate mid">Mittel</span> bei mindestens 3 brauchbaren Stunden. In der Tabelle zeigt die Zeile <strong>Kitebar</strong> die Bewertung als farbigen Streifen, in der Handy-Liste der farbige Rand links an jeder Stunde.</p>
 
 <h2>Die Tabelle</h2>
 <p>Jede Spalte ist eine Stunde. Die Tage sind durch eine graue Linie getrennt. Wenn die Tabelle nicht ganz auf den Bildschirm passt, zeigt ein Schatten am Rand, dass es weitergeht. Mit den runden Knöpfen ‹ › springst du einen Tag vor oder zurück. Du kannst auch seitlich wischen oder scrollen.</p>

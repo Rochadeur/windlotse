@@ -11,23 +11,34 @@
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#2a64f0">
 <style>
-  :root { --bg:#f6f7f9; --fg:#1b1f24; --muted:#6b7280; --line:#e3e6ea; --card:#fff; --sep:#b8bec7; }
-  @media (prefers-color-scheme: dark) { :root { --bg:#111418; --fg:#e8eaed; --muted:#9aa0a6; --line:#2a2f36; --card:#181c21; --sep:#4a525c; } }
-  body { margin:0; font:14px/1.4 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
-  header { padding:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
-  h1 { font-size:18px; margin:0 12px 0 0; }
-  select, button { font:inherit; padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--fg); }
-  button.on { background:var(--fg); color:var(--bg); }
+  /* Schrift Figtree (SIL Open Font License), liegt im Ordner fonts */
+  @font-face { font-family:"Figtree"; font-style:normal; font-weight:400 800; font-display:swap; src:url(fonts/figtree-latin.woff2) format("woff2"); }
+  :root { --bg:#eef3f9; --fg:#0f1d33; --muted:#5f6f86; --line:#e1e8f1; --card:#fff; --sep:#c2cddb; --accent:#1d5fd6;
+          --shadow:0 1px 2px rgba(15,29,51,.06), 0 4px 16px rgba(15,29,51,.06);
+          --good-bg:#dcf5e3; --good-fg:#11683a; --mid-bg:#fdf1cc; --mid-fg:#7a5a00; --bad-bg:#eceff3; --bad-fg:#5b6470; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#0e141d; --fg:#e6edf7; --muted:#93a1b5; --line:#222d3c; --card:#161e2a; --sep:#3a4a60; --accent:#6ea2ff;
+          --shadow:0 1px 2px rgba(0,0,0,.3), 0 4px 16px rgba(0,0,0,.25);
+          --good-bg:#123a26; --good-fg:#7ee2a6; --mid-bg:#3a3112; --mid-fg:#f2d06a; --bad-bg:#222d3c; --bad-fg:#93a1b5; } }
+  body { margin:0; font:15px/1.4 "Figtree", system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  header { padding:12px 16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; background:var(--card); border-bottom:1px solid var(--line); margin-bottom:12px; }
+  h1 { font-size:22px; font-weight:800; letter-spacing:-.01em; margin:0 12px 0 0; color:var(--accent); display:flex; align-items:center; gap:8px; }
+  h1::before { content:""; width:26px; height:26px; border-radius:7px; background:url(favicon.svg) center/cover; }
+  select, button { font:inherit; padding:6px 10px; border:1px solid var(--line); border-radius:10px; background:var(--card); color:var(--fg); }
+  select { padding:8px 12px; font-weight:600; }
+  #models { display:inline-flex; flex-wrap:wrap; background:var(--bg); border-radius:10px; padding:3px; gap:2px; }
+  #models button { border:0; border-radius:8px; background:transparent; padding:6px 10px; font-size:13px; cursor:pointer; }
+  #models button.on { background:var(--card); color:var(--accent); box-shadow:0 1px 3px rgba(15,29,51,.15); font-weight:700; }
   .opt { display:flex; align-items:center; gap:6px; cursor:pointer; }
-  .help { margin-left:auto; color:var(--fg); }
+  .help { margin-left:auto; color:var(--accent); font-weight:600; }
   .meta { color:var(--muted); padding:0 16px 8px; }
-  .meta a.map { color:var(--fg); white-space:nowrap; }
+  .meta a { color:var(--accent); }
+  .meta a.map { white-space:nowrap; font-weight:600; }
   .box { position:relative; margin:0 16px 24px; }
-  .wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:8px; scroll-behavior:smooth; }
+  .wrap { overflow-x:auto; background:var(--card); border-radius:16px; box-shadow:var(--shadow); scroll-behavior:smooth; }
   /* Schatten am Rand und Pfeil-Knöpfe zeigen, dass die Tabelle seitlich weitergeht */
   .box::before, .box::after { content:""; position:absolute; top:1px; bottom:1px; width:28px; pointer-events:none; opacity:0; transition:opacity .2s; z-index:2; }
   .box::before { left:var(--stick, 117px); background:linear-gradient(to right, rgba(0,0,0,.22), transparent); }
-  .box::after { right:1px; border-radius:0 8px 8px 0; background:linear-gradient(to left, rgba(0,0,0,.22), transparent); }
+  .box::after { right:1px; border-radius:0 16px 16px 0; background:linear-gradient(to left, rgba(0,0,0,.22), transparent); }
   .box.more-l::before, .box.more-r::after { opacity:1; }
   .nav { position:absolute; top:50%; transform:translateY(-50%); z-index:3; width:36px; height:36px; padding:0; border-radius:50%;
          font-size:20px; line-height:1; box-shadow:0 1px 4px rgba(0,0,0,.3); display:none; cursor:pointer; }
@@ -36,18 +47,50 @@
   .box.more-l .nav.prev, .box.more-r .nav.next { display:block; }
   @media (prefers-reduced-motion: reduce) { .wrap { scroll-behavior:auto; } }
   table { border-collapse:collapse; font-variant-numeric:tabular-nums; }
-  th, td { padding:4px 0; min-width:34px; text-align:center; border-left:1px solid var(--line); }
-  th:first-child, td:first-child { position:sticky; left:0; background:var(--card); text-align:left; padding:4px 10px; min-width:96px; color:var(--muted); font-weight:500; border-left:0; z-index:1; }
-  tr.day th { font-weight:600; border-bottom:1px solid var(--line); }
+  th, td { padding:4px 0; min-width:34px; text-align:center; border-left:1px solid transparent; }
+  th:first-child, td:first-child { position:sticky; left:0; background:var(--card); text-align:left; padding:4px 10px; min-width:96px; color:var(--muted); font-weight:500; border-left:0; z-index:1;
+                                   font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+  tr.day th { font-weight:700; font-size:13px; padding:8px 0; border-bottom:1px solid var(--line); }
   /* Windzeile als Balken (Windfinder-Stil): Höhe/Farbe = Wind, Strich darüber = Böe */
   td.bar { vertical-align:bottom; padding:0; height:84px; position:relative; }
-  td.bar .b { position:absolute; left:2px; right:2px; bottom:0; }
+  td.bar .b { position:absolute; left:2px; right:2px; bottom:0; border-radius:4px 4px 0 0; }
   td.bar .g { position:absolute; left:4px; right:4px; height:3px; }
   td.bar span { position:relative; font-weight:600; font-size:12px; display:block; padding-bottom:2px; color:#111; }
   td.bar span.dk { color:#fff; }
   td.gu { font-weight:600; }
   /* Trennlinie vor jedem neuen Tag */
   th.ds, td.ds { border-left:2px solid var(--sep); }
+  /* Kite-Bewertung: grün = gut, gelb = mittel, grau = kaum/zu viel Wind */
+  .rate { align-self:flex-start; font-size:11px; font-weight:700; padding:3px 9px; border-radius:999px; letter-spacing:.03em; text-transform:uppercase; white-space:nowrap; }
+  .rate.good { background:var(--good-bg); color:var(--good-fg); }
+  .rate.mid { background:var(--mid-bg); color:var(--mid-fg); }
+  .rate.bad { background:var(--bad-bg); color:var(--bad-fg); }
+  tr.kiterow td:not(:first-child) { height:10px; padding:0; }
+  tr.kiterow td:first-child { font-size:11px; }
+  .k-good { background:#58c98a; } .k-mid { background:#f0cf5a; } .k-bad { background:transparent; }
+  /* Jetzt-Karte und Tageskarten */
+  #hero { margin:0 16px 12px; border-radius:16px; padding:16px; background:var(--card); box-shadow:var(--shadow);
+          display:grid; grid-template-columns:auto 1fr auto; gap:4px 16px; align-items:center; }
+  #hero:empty, #days:empty { display:none; }
+  #hero .sp { grid-column:1 / -1; font-size:13px; color:var(--muted); }
+  #hero .big { font-size:44px; font-weight:700; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+  #hero .big small { font-size:16px; font-weight:600; color:var(--muted); margin-left:4px; }
+  #hero .sub { color:var(--muted); font-size:14px; }
+  #hero .sub b { color:var(--fg); }
+  #hero .harrow { display:flex; flex-direction:column; align-items:center; font-weight:600; font-size:13px; }
+  #hero .harrow svg { width:48px; height:48px; fill:var(--fg); }
+  #hero .harrow small { display:none; }
+  #days { margin:0 16px 12px; display:flex; gap:8px; overflow-x:auto; padding:2px 2px 6px; scroll-snap-type:x mandatory; }
+  .dc { flex:0 0 170px; scroll-snap-align:start; background:var(--card); border:0; border-radius:16px; box-shadow:var(--shadow); padding:10px 12px;
+        display:flex; flex-direction:column; gap:6px; cursor:pointer; text-align:left; font:inherit; color:var(--fg); }
+  .dc .d { font-weight:700; }
+  .dc .mx { font-size:22px; white-space:nowrap; font-weight:700; font-variant-numeric:tabular-nums; }
+  .dc .mx small { font-size:12px; color:var(--muted); font-weight:500; }
+  .dc .ph { font-size:12px; color:var(--muted); }
+  .dc .mini { display:flex; align-items:flex-end; gap:1px; height:28px; }
+  .dc .mini i { flex:1; border-radius:2px 2px 0 0; }
+  .dc.sel { outline:2px solid var(--accent); }
+  body.vgl #hero, body.vgl #days { display:none; }
   /* Windfinder-Stil: gefüllter Pfeil, zeigt wohin der Wind weht */
   .dir { display:flex; flex-direction:column; align-items:center; gap:1px; }
   .dir svg { width:20px; height:20px; fill:var(--fg); }
@@ -58,18 +101,24 @@
     .box { display:none; }
     #list { display:flex; flex-direction:column; gap:8px; }
     header { padding:12px; gap:8px; }
+    #hero { margin:0 12px 10px; padding:12px; }
+    #hero .big { font-size:36px; }
+    #days { margin:0 12px 10px; }
     .meta { padding:0 12px 8px; font-size:12px; }
     body #cmp { width:100%; flex-wrap:nowrap; }
     body #cmp select { flex:1; min-width:0; max-width:none; padding:6px 4px; }
   }
-  .day-card { background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
-  .day-card .sum { padding:10px 12px; display:grid; grid-template-columns:auto 1fr; gap:4px 10px; align-items:center; }
+  .day-card { background:var(--card); border-radius:16px; box-shadow:var(--shadow); overflow:hidden; scroll-margin-top:8px; }
+  .day-card .sum { padding:10px 12px; display:grid; grid-template-columns:auto auto 1fr; gap:4px 10px; align-items:center; }
   .day-card .dl { font-weight:600; }
   .day-card .best { color:var(--muted); font-size:13px; text-align:right; }
+  .day-card .sum .rate { align-self:center; }
   .day-card .best b { color:var(--fg); }
-  .strip { grid-column:1 / span 2; display:flex; height:8px; border-radius:4px; overflow:hidden; }
+  .strip { grid-column:1 / -1; display:flex; height:8px; border-radius:4px; overflow:hidden; }
   .strip i { flex:1; }
-  .hr { display:grid; grid-template-columns:30px 28px 1fr 50px 28px 28px; gap:6px; align-items:center; padding:3px 12px; border-top:1px solid var(--line); font-variant-numeric:tabular-nums; }
+  .hr { display:grid; grid-template-columns:30px 28px 1fr 50px 28px 28px; gap:6px; align-items:center; padding:3px 12px 3px 9px; border-top:1px solid var(--line); border-left:3px solid transparent; font-variant-numeric:tabular-nums; }
+  .hr.hk-good { border-left-color:#58c98a; } .hr.hk-mid { border-left-color:#f0cf5a; }
+  .hr.head { border-left-color:transparent; }
   .hr.head { font-size:11px; color:var(--muted); padding-block:4px; }
   .hr .t { color:var(--muted); }
   .hr .w { position:relative; height:24px; }
@@ -119,6 +168,8 @@
   <a class="help" href="hilfe.html">Hilfe</a>
 </header>
 <div class="meta" id="meta"></div>
+<div id="hero"></div>
+<div id="days"></div>
 <div class="box" id="box">
   <button class="nav prev" id="prev" title="Vorheriger Tag" aria-label="Vorheriger Tag">‹</button>
   <div class="wrap" id="wrap"><table id="tbl"></table></div>
@@ -197,6 +248,7 @@ function render(d) {
   document.getElementById("tbl").innerHTML =
     `<tr class="day"><th></th>${days.map((d, i) => `<th colspan="${d.n}"${i ? ' class="ds"' : ""}>${d.label}</th>`).join("")}</tr>` +
     line("Uhrzeit", { v: r => local(r.t).getHours() + "h" }) +
+    `<tr class="kiterow"><td>Kitebar</td>${rows.map((r, i) => `<td class="k-${kite(r)}${starts.has(i) ? " ds" : ""}" title="${RATE[kite(r)]}"></td>`).join("")}</tr>` +
     `<tr><td>Wind (kn)</td>${rows.map((r, i) => {
       const h = Math.max(Math.min(r.wind, 35) * PX_PER_KN, 16), g = Math.min(r.gust, 35) * PX_PER_KN, c = color(r.wind);
       return `<td class="bar${starts.has(i) ? " ds" : ""}"><div class="b" style="height:${h}px;background:${c}"></div>` +
@@ -208,8 +260,48 @@ function render(d) {
     line("Wolken (%)", { v: r => r.cloud }) +
     line("Regen (mm)", { v: r => r.rain >= 0.1 ? r.rain : "" });
   renderList(rows, days);
+  renderTop(d, rows, days);
   edges();
 }
+
+// Kite-Bewertung je Stunde: 12-25 kn und Böen bis 35 kn gut, 9-30 kn mittel, sonst kaum oder zu viel Wind
+const kite = r => r.wind >= 12 && r.wind <= 25 && r.gust <= 35 ? "good" : r.wind >= 9 && r.wind <= 30 ? "mid" : "bad";
+const RATE = { good: "Gut", mid: "Mittel", bad: "Kaum Wind" };
+// Tag: gut ab 3 guten Stunden, mittel ab 3 brauchbaren Stunden; dazu das beste Zeitfenster
+function rateDay(hrs) {
+  const good = hrs.filter(h => kite(h) === "good"), ok = hrs.filter(h => kite(h) !== "bad");
+  const rate = good.length >= 3 ? "good" : ok.length >= 3 ? "mid" : "bad";
+  const win = good.length ? good : ok;
+  const label = rate === "bad" && hrs.some(h => h.wind > 30) ? "Zu viel Wind" : RATE[rate];
+  return { rate, label, ph: win.length ? `${local(win[0].t).getHours()}–${local(win.at(-1).t).getHours()} Uhr` : "" };
+}
+
+// Jetzt-Karte (nächste Stunde) und Tageskarten zum Antippen
+function renderTop(d, rows, days) {
+  const hero = document.getElementById("hero"), dc = document.getElementById("days");
+  if (!rows.length) { hero.innerHTML = dc.innerHTML = ""; return; }
+  const n = rows[0], t = local(n.t), k = kite(n);
+  const when = t - Date.now() < 90 * 60e3 ? `jetzt (${t.getHours()} Uhr)` : `nächste Stunde mit Tageslicht: ${DAYS[t.getDay()]} ${t.getHours()} Uhr`;
+  hero.innerHTML = `<span class="sp">${d.spot.name} · ${when}</span>
+    <span class="harrow">${arrow(n.dir)}<span>${compass(n.dir)}</span></span>
+    <span><span class="big">${Math.round(n.wind)}<small>kn</small></span><br><span class="sub">Böen <b>${Math.round(n.gust)} kn</b> · ${Math.round(n.temp)} °C · ${n.cloud} % Wolken</span></span>
+    <span class="rate ${k}">${k === "bad" && n.wind > 30 ? "Zu viel Wind" : RATE[k]}</span>`;
+  dc.innerHTML = days.map((day, i) => {
+    const hrs = rows.slice(day.first, day.first + day.n), mx = hrs.reduce((a, b) => b.wind > a.wind ? b : a), rd = rateDay(hrs);
+    return `<button class="dc ${rd.rate}" data-i="${i}"><span class="d">${day.label}</span>
+      <span class="mx">${Math.round(mx.wind)} <small>kn · ${compass(mx.dir)}</small></span>
+      <span class="mini">${hrs.map(h => `<i style="height:${Math.max(3, Math.min(h.wind, 35) / 35 * 28)}px;background:${color(h.wind)}"></i>`).join("")}</span>
+      <span class="rate ${rd.rate}">${rd.label}</span><span class="ph">Böen bis ${Math.round(Math.max(...hrs.map(h => h.gust)))} kn${rd.rate === "bad" ? "" : " · Beste Zeit " + rd.ph}</span></button>`;
+  }).join("");
+}
+// Tageskarte antippen: in der Tabelle bzw. Liste zu diesem Tag springen
+document.getElementById("days").onclick = e => {
+  const b = e.target.closest(".dc"); if (!b) return;
+  document.querySelectorAll(".dc").forEach(x => x.classList.toggle("sel", x === b));
+  const i = +b.dataset.i, th = wrap.querySelectorAll("tr.day th")[i + 1];
+  if (th && getComputedStyle(box).display !== "none") wrap.scrollLeft = th.offsetLeft - wrap.querySelector("td").offsetWidth;
+  else document.querySelectorAll("#list .day-card")[i]?.scrollIntoView({ behavior: "smooth" });
+};
 
 // Zeigt Schatten/Knöpfe nur, wenn es in die Richtung noch etwas zu sehen gibt
 const wrap = document.getElementById("wrap"), box = document.getElementById("box");
@@ -249,14 +341,15 @@ function renderList(rows, days) {
     }
     const h = i => local(hrs[i].t).getHours();
     const phase = a === b ? `${h(a)} Uhr` : `${h(a)}–${h(b)} Uhr`;
+    const rd = rateDay(hrs);
     return `<section class="day-card">
-      <div class="sum"><span class="dl">${d.label}</span>
+      <div class="sum"><span class="dl">${d.label}</span><span class="rate ${rd.rate}">${rd.label}</span>
         <span class="best"><b>${Math.round(hrs[m].wind)} kn</b> (Böen ${Math.round(hrs[m].gust)}) · ${compass(hrs[m].dir)} · ${phase}</span>
         <span class="strip">${hrs.map(r => `<i style="background:${color(r.wind)}"></i>`).join("")}</span></div>
       <div class="hr head"><span>Zeit</span><span>Böe</span><span>Wind (kn)</span><span>Richtung</span><span class="n">°C</span><span class="n">mm</span></div>
       ${hrs.map(r => {
         const c = color(r.wind), wp = Math.min(r.wind, 35) / 35 * 100, gp = Math.min(r.gust, 35) / 35 * 100;
-        return `<div class="hr"><span class="t">${local(r.t).getHours()}h</span>
+        return `<div class="hr hk-${kite(r)}"><span class="t">${local(r.t).getHours()}h</span>
           <span class="gn${isDark(color(r.gust)) ? " dk" : ""}" style="background:${color(r.gust)}">${Math.round(r.gust)}</span>
           <span class="w"><span class="b${isDark(c) ? " dk" : ""}" style="width:${wp}%;background:${c}">${Math.round(r.wind)}</span>
             <span class="g" style="left:calc(${gp}% - 1px);background:${color(r.gust)}"></span></span>
