@@ -32,9 +32,6 @@ jobs:
       # DMI HARMONIE + ECMWF über Open-Meteo; ein Ausfall soll die ICON-Daten nicht blockieren
       - run: python fetch_openmeteo.py --out web/data
         continue-on-error: true
-      # Messwerte der nächsten DWD-Station; der bisherige Verlauf kommt von der veröffentlichten Seite
-      - run: python fetch_obs.py --out web/data --prev "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/data/obs"
-        continue-on-error: true
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
