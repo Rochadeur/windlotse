@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WindLotse – Messwerte</title>
+<meta name="apple-mobile-web-app-title" content="WindLotse">
+<link rel="icon" href="favicon.ico" sizes="48x48">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2a64f0">
+<style>
+  /* Gleiche Farben und Bausteine wie die Vorhersage-Seite; dazu --fc für die Vorhersage-Linie */
+  :root { --bg:#f6f7f9; --fg:#1b1f24; --muted:#6b7280; --line:#e3e6ea; --card:#fff; --sep:#b8bec7; --fc:#d0306a; --gust:#8a93a0; --plus:#1a8a4a; --minus:#c0392b; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#111418; --fg:#e8eaed; --muted:#9aa0a6; --line:#2a2f36; --card:#181c21; --sep:#4a525c; --fc:#ff6f9f; --gust:#7c8591; --plus:#4cc77f; --minus:#ff7b6b; } }
+  body { margin:0; font:14px/1.4 system-ui, sans-serif; background:var(--bg); color:var(--fg); }
+  header { padding:16px; display:flex; gap:12px; flex-wrap:wrap; align-items:center; }
+  h1 { font-size:18px; margin:0 12px 0 0; }
+  h1 a { color:inherit; text-decoration:none; }
+  h1 small { font-weight:500; color:var(--muted); font-size:15px; }
+  select, button { font:inherit; padding:6px 10px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--fg); }
+  button { cursor:pointer; }
+  button.on { background:var(--fg); color:var(--bg); }
+  .grp { display:flex; gap:4px; flex-wrap:wrap; align-items:center; }
+  .grp > span { color:var(--muted); margin-right:2px; }
+  .links { margin-left:auto; display:flex; gap:14px; }
+  .links a { color:var(--fg); }
+  .meta { color:var(--muted); padding:0 16px 10px; }
+  .meta a { color:var(--fg); }
+  main { display:flex; flex-direction:column; gap:16px; padding:0 16px 24px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:8px; }
+  h2 { font-size:15px; margin:0; }
+  /* Jetzt: letzter Messwert */
+  .now { display:flex; flex-wrap:wrap; gap:10px 28px; align-items:center; padding:12px 16px; }
+  .now .v { display:flex; flex-direction:column; }
+  .now .v small { color:var(--muted); font-size:12px; }
+  .now .v b { font-size:24px; font-variant-numeric:tabular-nums; line-height:1.2; }
+  .now .v b em { font-style:normal; font-size:13px; font-weight:500; opacity:.7; margin-left:2px; }
+  .now .chip { display:inline-block; padding:2px 10px; border-radius:6px; color:#111; }
+  .now .chip.dk { color:#fff; }
+  .now .dir svg { width:26px; height:26px; fill:var(--fg); vertical-align:-5px; }
+  .now .when { margin-left:auto; color:var(--muted); font-size:13px; text-align:right; }
+  .now .when.old { color:var(--minus); }
+  /* Diagramm */
+  .chart { padding:12px 16px 8px; }
+  .chart .top { display:flex; flex-wrap:wrap; gap:6px 18px; align-items:baseline; margin-bottom:6px; }
+  .legend { display:flex; flex-wrap:wrap; gap:4px 14px; color:var(--muted); font-size:12px; }
+  .legend i { display:inline-block; width:18px; height:0; border-top:3px solid; vertical-align:middle; margin-right:5px; }
+  .legend i.ms { border-color:var(--fg); }
+  .legend i.gu { border-top:2px dotted var(--gust); }
+  .legend i.fc { border-top:3px dashed var(--fc); }
+  .plot { position:relative; }
+  .plot svg { display:block; width:100%; height:auto; overflow:visible; touch-action:pan-y; }
+  .plot text { fill:var(--muted); font-size:11px; font-variant-numeric:tabular-nums; }
+  .tip { position:absolute; top:0; pointer-events:none; background:var(--card); border:1px solid var(--line); border-radius:6px; padding:6px 8px; font-size:12px; line-height:1.45; box-shadow:0 2px 8px rgba(0,0,0,.15); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .tip b { color:var(--fg); }
+  .tip .f { color:var(--fc); }
+  /* Treffsicherheit der Modelle */
+  .score { padding:12px 16px; display:flex; flex-direction:column; gap:8px; }
+  .score p { margin:0; color:var(--muted); font-size:13px; }
+  .bars { display:grid; grid-template-columns:minmax(110px, auto) 1fr auto; gap:6px 10px; align-items:center; font-variant-numeric:tabular-nums; }
+  .bars button { all:unset; cursor:pointer; text-decoration:underline dotted; text-underline-offset:3px; }
+  .bars button.on { font-weight:600; text-decoration:none; }
+  .bars .track { height:12px; background:var(--line); border-radius:3px; overflow:hidden; }
+  .bars .track i { display:block; height:100%; background:var(--fc); opacity:.75; border-radius:3px; }
+  .bars .n { font-size:13px; color:var(--muted); text-align:right; }
+  .bars .n b { color:var(--fg); }
+  /* Stundentabelle wie auf der Vorhersage-Seite */
+  .wrap { overflow-x:auto; background:var(--card); border:1px solid var(--line); border-radius:8px; }
+  table { border-collapse:collapse; font-variant-numeric:tabular-nums; }
+  th, td { padding:4px 0; min-width:34px; text-align:center; border-left:1px solid var(--line); }
+  th:first-child, td:first-child { position:sticky; left:0; background:var(--card); text-align:left; padding:4px 10px; min-width:110px; color:var(--muted); font-weight:500; border-left:0; z-index:1; }
+  tr.day th { font-weight:600; border-bottom:1px solid var(--line); }
+  tr.sec td { border-top:2px solid var(--sep); }
+  td.lbl { color:var(--fg) !important; font-weight:600 !important; }
+  td.lbl small { display:block; font-weight:400; color:var(--muted); font-size:11px; }
+  td.bar { vertical-align:bottom; padding:0; height:70px; position:relative; }
+  td.bar .b { position:absolute; left:2px; right:2px; bottom:0; }
+  td.bar .g { position:absolute; left:4px; right:4px; height:3px; }
+  td.bar span { position:relative; font-weight:600; font-size:12px; display:block; padding-bottom:2px; color:#111; }
+  td.bar span.dk { color:#fff; }
+  td.gu { font-weight:600; }
+  td.plus { color:var(--plus); font-weight:600; }
+  td.minus { color:var(--minus); font-weight:600; }
+  th.ds, td.ds { border-left:2px solid var(--sep); }
+  .dir { display:flex; flex-direction:column; align-items:center; gap:1px; }
+  .dir svg { width:20px; height:20px; fill:var(--fg); }
+  .dir small { font-size:10px; color:var(--muted); line-height:1; }
+  /* Handy hochkant: Stunden als Liste, neueste zuerst */
+  #list { display:none; flex-direction:column; gap:8px; }
+  @media (max-width: 640px) and (orientation: portrait) {
+    .wrap { display:none; }
+    #list { display:flex; }
+    header { padding:12px; gap:8px; }
+    .meta { padding:0 12px 8px; font-size:12px; }
+    main { padding:0 12px 24px; gap:12px; }
+    .links { margin-left:0; }
+    .now { gap:8px 18px; }
+    .now .when { margin-left:0; text-align:left; width:100%; }
+  }
+  .day-card { background:var(--card); border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .day-card .dl { padding:8px 12px; font-weight:600; }
+  .row { display:grid; grid-template-columns:30px 1fr 1fr 36px; gap:6px; align-items:center; padding:3px 12px; border-top:1px solid var(--line); font-variant-numeric:tabular-nums; }
+  .row.head { font-size:11px; color:var(--muted); padding-block:4px; }
+  .row .t { color:var(--muted); }
+  .row .c { display:flex; align-items:center; justify-content:center; gap:4px; border-radius:4px; height:28px; color:#111; }
+  .row .c.dk { color:#fff; }
+  .row .c b { font-size:14px; }
+  .row .c em { font-style:normal; font-size:11px; opacity:.85; }
+  .row .c svg { width:14px; height:14px; fill:currentColor; }
+  .row .c.nd { background:var(--line); color:var(--muted); }
+  .row .d { text-align:right; font-weight:600; font-size:13px; }
+  .row .d.plus { color:var(--plus); } .row .d.minus { color:var(--minus); }
+  .empty { padding:16px; color:var(--muted); }
+  footer { color:var(--muted); padding:0 16px 24px; font-size:13px; }
+  footer a { color:var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1><a href="index.html">WindLotse</a> <small>Messwerte</small></h1>
+  <select id="spot" aria-label="Spot"></select>
+  <span class="grp" id="range"><button data-h="24">24 h</button><button data-h="72">3 Tage</button><button data-h="168">7 Tage</button></span>
+  <span class="links"><a href="index.html">Vorhersage</a><a href="hilfe.html#messwerte">Hilfe</a></span>
+</header>
+<div class="meta" id="meta"></div>
+<main>
+  <section class="card now" id="now"></section>
+  <section class="card chart">
+    <div class="top"><h2>Wind gemessen und vorhergesagt</h2>
+      <span class="grp" id="models"><span>Vorhersage:</span></span></div>
+    <div class="legend"><span><i class="ms"></i>Wind gemessen</span><span><i class="gu"></i>Böen gemessen</span><span><i class="fc"></i><span id="lgfc">Vorhersage</span></span></div>
+    <div class="plot" id="plot"></div>
+  </section>
+  <section class="card score" id="score"></section>
+  <div class="wrap" id="wrap"><table id="tbl"></table></div>
+  <div id="list"></div>
+</main>
+<footer>Messwerte: Deutscher Wetterdienst, Station in der Nähe des Spots, nicht am Spot selbst · Alle Angaben ohne Gewähr · <a href="impressum.html">Impressum</a> · <a href="impressum.html#datenschutz">Datenschutz</a></footer>
+<script>
+const MODELS = { "icon-d2": "ICON-D2", "icon-eu": "ICON-EU", "dmi": "DMI HARMONIE", "ecmwf": "ECMWF" };
+const SCALE = [[0,"#1838e8"],[4,"#2a64f0"],[7,"#3c90f0"],[9,"#54c0f8"],[11,"#66dcea"],[13,"#58b490"],[15,"#60d040"],
+               [17,"#6cf048"],[19,"#c4fc78"],[21,"#f8dc48"],[24,"#f0a030"],[27,"#e85030"],[31,"#d02060"],[35,"#a020a0"]];
+const hex = h => [1,3,5].map(i => parseInt(h.slice(i, i + 2), 16));
+const isDark = col => { const [r, g, b] = hex(col); return 0.299 * r + 0.587 * g + 0.114 * b < 140; };
+function color(kn) {
+  for (let i = 1; i < SCALE.length; i++) if (kn < SCALE[i][0]) {
+    const [k0, c0] = SCALE[i - 1], [k1, c1] = SCALE[i], f = (kn - k0) / (k1 - k0), a = hex(c0), b = hex(c1);
+    return "#" + a.map((v, j) => Math.round(v + (b[j] - v) * f).toString(16).padStart(2, "0")).join("");
+  }
+  return SCALE.at(-1)[1];
+}
+const DAYS = ["So","Mo","Di","Mi","Do","Fr","Sa"];
+const COMPASS = ["N","NNO","NO","ONO","O","OSO","SO","SSO","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+const compass = deg => COMPASS[Math.round(deg / 22.5) % 16];
+const svgArrow = deg => `<svg viewBox="0 0 24 24" style="transform:rotate(${deg + 180}deg)"><path d="M12 2 L17 21 L12 17 L7 21 Z"/></svg>`;
+const arrow = deg => deg == null ? "" : `<span class="dir" title="${Math.round(deg)}° (${compass(deg)})">${svgArrow(deg)}<small>${compass(deg)}</small></span>`;
+const local = iso => new Date(iso.replace("Z", ":00Z"));
+const hm = t => t.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+const dayLabel = t => `${DAYS[t.getDay()]} ${t.getDate()}.${t.getMonth() + 1}.`;
+const kn = v => v == null ? "–" : Math.round(v);
+const H = 3600e3;
+
+let spots = [], spot, data, hours = 24, model = "icon-d2";
+try { hours = +localStorage.getItem("obsHours") || 24; model = localStorage.getItem("obsModel") || model; } catch {}
+
+// Mittel der Richtung über Vektoren (sonst wird aus 350° und 10° fälschlich 180°)
+function meanDir(ds) {
+  let x = 0, y = 0;
+  for (const d of ds) { x += Math.sin(d * Math.PI / 180); y += Math.cos(d * Math.PI / 180); }
+  return ds.length ? (Math.atan2(x, y) * 180 / Math.PI + 360) % 360 : null;
+}
+
+// Stundenwerte aus den 10-Minuten-Werten: Wind = Mittel um die volle Stunde (-20 bis +30 min),
+// Böe = stärkste Böe der vorangegangenen Stunde (so rechnen auch die Modelle)
+function hourly(obs) {
+  if (!obs.length) return [];
+  const t0 = Math.ceil(obs[0].t / H) * H, t1 = Math.floor(obs.at(-1).t / H) * H, out = [];
+  for (let t = t0; t <= t1; t += H) {
+    const w = obs.filter(o => o.t >= t - 20 * 6e4 && o.t <= t + 30 * 6e4);
+    if (w.length < 3) continue;
+    const g = obs.filter(o => o.t > t - H && o.t <= t && o.gust != null);
+    out.push({ t, wind: w.reduce((s, o) => s + o.wind, 0) / w.length,
+      gust: g.length ? Math.max(...g.map(o => o.gust)) : null,
+      dir: meanDir(w.filter(o => o.dir != null && o.wind > 0).map(o => o.dir)) });
+  }
+  return out;
+}
+
+async function load() {
+  const r = await fetch(`data/obs/${spot.id}.json`, { cache: "no-cache" }).catch(() => null);
+  data = r && r.ok ? await r.json() : null;
+  render();
+}
+
+function render() {
+  const meta = document.getElementById("meta");
+  if (!data || !data.obs.length) {
+    meta.textContent = `${spot.name}: für diesen Spot gibt es noch keine Messwerte.`;
+    for (const id of ["now", "plot", "score", "tbl", "list"]) document.getElementById(id).innerHTML = "";
+    return;
+  }
+  const s = data.station;
+  const obsAll = data.obs.map(([t, wind, gust, dir, temp]) => ({ t: local(t).getTime(), wind, gust, dir, temp }));
+  const last = obsAll.at(-1), end = last.t, start = end - hours * H;
+  const obs = obsAll.filter(o => o.t >= start);
+  const hrs = hourly(obsAll).filter(h => h.t >= start);
+  const fcs = {};
+  for (const [m, rows] of Object.entries(data.fc || {}))
+    fcs[m] = new Map(rows.map(([t, wind, gust, dir]) => [local(t).getTime(), { wind, gust, dir }]));
+  if (!fcs[model]) model = Object.keys(fcs)[0] || model;
+  const fc = fcs[model] || new Map();
+
+  const map = `https://www.google.com/maps/search/?api=1&query=${s.lat},${s.lon}`;
+  meta.innerHTML = `${data.spot.name} · Messstation <a href="${map}" target="_blank" rel="noopener">${s.name}</a> ` +
+    `(${String(s.dist).replace(".", ",")} km vom Spot, ${s.height} m ü. NN) · abgerufen ${hm(local(data.fetched))} · ` +
+    `Daten: <a href="https://www.dwd.de/" target="_blank" rel="noopener">Deutscher Wetterdienst</a>`;
+
+  // Jetzt
+  const age = Math.round((Date.now() - last.t) / 6e4);
+  const chip = v => { const c = color(v); return `<span class="chip${isDark(c) ? " dk" : ""}" style="background:${c}">${kn(v)}<em>kn</em></span>`; };
+  document.getElementById("now").innerHTML =
+    `<span class="v"><small>Wind (10-min-Mittel)</small><b>${chip(last.wind)}</b></span>` +
+    `<span class="v"><small>Böen</small><b>${last.gust == null ? "–" : chip(last.gust)}</b></span>` +
+    `<span class="v dir"><small>Richtung</small><b>${last.dir == null ? "–" : `${svgArrow(last.dir)} ${compass(last.dir)}<em>${last.dir}°</em>`}</b></span>` +
+    (last.temp == null ? "" : `<span class="v"><small>Temperatur</small><b>${Math.round(last.temp)}<em>°C</em></b></span>`) +
+    `<span class="when${age > 90 ? " old" : ""}">Messung von ${hm(new Date(last.t))} Uhr<br>${age < 60 ? `vor ${age} min` : `vor ${Math.floor(age / 60)} h ${age % 60} min`}</span>`;
+
+  // Modellauswahl: nur Modelle, für die es schon vergangene Vorhersagen gibt
+  const mEl = document.getElementById("models");
+  mEl.innerHTML = `<span>Vorhersage:</span>` + Object.keys(MODELS).filter(m => fcs[m])
+    .map(m => `<button data-m="${m}" class="${m === model ? "on" : ""}">${MODELS[m]}</button>`).join("") ||
+    `<span>Vorhersage:</span> noch keine aufgehoben`;
+  document.getElementById("lgfc").textContent = `Vorhersage ${MODELS[model] || ""}`;
+
+  drawChart(obs, fc, start, end);
+  renderScore(hrs, fcs);
+  renderTable(hrs, fc);
+}
+
+function drawChart(obs, fc, start, end) {
+  const plot = document.getElementById("plot");
+  const W = Math.max(plot.clientWidth, 300), Hh = W < 500 ? 210 : 260, L = 30, R = 8, T = 8, B = 22;
+  const fcPts = [...fc.entries()].filter(([t]) => t >= start && t <= end).sort((a, b) => a[0] - b[0]);
+  const top = Math.max(10, ...obs.map(o => o.gust ?? o.wind), ...fcPts.map(([, f]) => Math.max(f.wind, f.gust || 0)));
+  const yMax = Math.ceil(top / 5) * 5;
+  const x = t => L + (t - start) / (end - start) * (W - L - R), y = v => T + (1 - v / yMax) * (Hh - T - B);
+  let g = "";
+  // Raster waagerecht alle 5 (bei viel Wind 10) kn
+  const step = yMax > 30 ? 10 : 5;
+  for (let v = 0; v <= yMax; v += step)
+    g += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="1"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+  // Beschriftung alle paar Stunden (Ortszeit), um Mitternacht Tag und Trennlinie
+  const tick = hours <= 24 ? (W < 500 ? 6 : 3) : hours <= 72 ? (W < 500 ? 12 : 6) : 24;
+  for (let t = Math.ceil(start / H) * H; t <= end; t += H) {
+    const d = new Date(t), hr = d.getHours();
+    if (hr === 0) g += `<line x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${Hh - B}" stroke="var(--sep)" stroke-width="1"/>`;
+    if (hr % tick === 0 && x(t) > L + 14 && x(t) < W - R - 14)
+      g += `<text x="${x(t)}" y="${Hh - 6}" text-anchor="middle">${hr === 0 ? dayLabel(d) : hr + "h"}</text>`;
+  }
+  const path = pts => pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("");
+  // Lücken (fehlende Messungen > 30 min) nicht verbinden
+  const segs = (list, f) => { const out = []; let cur = [];
+    list.forEach((o, i) => { if (i && o.t - list[i - 1].t > 30 * 6e4) { out.push(cur); cur = []; } if (f(o) != null) cur.push([x(o.t), y(f(o))]); });
+    out.push(cur); return out.filter(c => c.length > 1); };
+  g += segs(obs, o => o.gust).map(c => `<path d="${path(c)}" fill="none" stroke="var(--gust)" stroke-width="1.5" stroke-dasharray="2 2"/>`).join("");
+  g += segs(obs, o => o.wind).map(c => `<path d="${path(c)}" fill="none" stroke="var(--fg)" stroke-width="2" stroke-linejoin="round"/>`).join("");
+  if (fcPts.length > 1) g += `<path d="${path(fcPts.map(([t, f]) => [x(t), y(f.wind)]))}" fill="none" stroke="var(--fc)" stroke-width="2.5" stroke-dasharray="6 4"/>`;
+  const lo = obs.at(-1);
+  g += `<circle cx="${x(lo.t)}" cy="${y(lo.wind)}" r="4" fill="var(--fg)"/>`;
+  g += `<line id="cur" x1="0" x2="0" y1="${T}" y2="${Hh - B}" stroke="var(--muted)" stroke-width="1" visibility="hidden"/>`;
+  plot.innerHTML = `<svg viewBox="0 0 ${W} ${Hh}" width="${W}" height="${Hh}" role="img" aria-label="Verlauf von Wind und Böen">${g}</svg><div class="tip" id="tip" hidden></div>`;
+
+  // Zeiger: zeigt Messung und Vorhersage zur nächsten Uhrzeit
+  const svg = plot.querySelector("svg"), tip = plot.querySelector("#tip"), cur = plot.querySelector("#cur");
+  const show = e => {
+    const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) * W / r.width;
+    if (px < L || px > W - R) return hide();
+    const t = start + (px - L) / (W - L - R) * (end - start);
+    let o = obs[0]; for (const q of obs) if (Math.abs(q.t - t) < Math.abs(o.t - t)) o = q;
+    const f = fc.get(Math.round(o.t / H) * H);
+    cur.setAttribute("x1", x(o.t)); cur.setAttribute("x2", x(o.t)); cur.setAttribute("visibility", "visible");
+    tip.innerHTML = `${dayLabel(new Date(o.t))} ${hm(new Date(o.t))}<br>Wind <b>${kn(o.wind)} kn</b> · Böen <b>${kn(o.gust)}</b>${o.dir != null ? " · " + compass(o.dir) : ""}` +
+      (f ? `<br><span class="f">${MODELS[model]}: ${kn(f.wind)} kn · Böen ${kn(f.gust)} · ${compass(f.dir)}</span>` : "");
+    tip.hidden = false;
+    const left = x(o.t) / W * r.width;
+    tip.style.left = Math.min(Math.max(left - tip.offsetWidth / 2, 0), r.width - tip.offsetWidth) + "px";
+  };
+  const hide = () => { tip.hidden = true; cur.setAttribute("visibility", "hidden"); };
+  svg.addEventListener("pointermove", show);
+  svg.addEventListener("pointerdown", show);
+  svg.addEventListener("pointerleave", hide);
+}
+
+// Welches Modell lag näher dran? Mittlere Abweichung beim Wind über alle Stunden mit Messung und Vorhersage
+function renderScore(hrs, fcs) {
+  const res = Object.keys(MODELS).filter(m => fcs[m]).map(m => {
+    const pairs = hrs.map(h => [h, fcs[m].get(h.t)]).filter(([, f]) => f);
+    const mae = pairs.reduce((s, [h, f]) => s + Math.abs(f.wind - h.wind), 0) / (pairs.length || 1);
+    const bias = pairs.reduce((s, [h, f]) => s + (f.wind - h.wind), 0) / (pairs.length || 1);
+    return { m, n: pairs.length, mae, bias };
+  }).filter(r => r.n);
+  const el = document.getElementById("score");
+  if (!res.length) { el.innerHTML = `<h2>Wie gut lagen die Modelle?</h2><p>Dafür sammelt die Seite gerade noch Vorhersagen. Nach ein paar Stunden steht hier, welches Modell am nächsten an der Messung lag.</p>`; return; }
+  const max = Math.max(...res.map(r => r.mae), 1);
+  const fmt = v => v.toFixed(1).replace(".", ",");
+  el.innerHTML = `<h2>Wie gut lagen die Modelle?</h2>
+    <p>Mittlere Abweichung beim Wind im gewählten Zeitraum (kleiner ist besser). Dahinter: im Schnitt zu viel (+) oder zu wenig (−) vorhergesagt.</p>
+    <div class="bars">${res.sort((a, b) => a.mae - b.mae).map(r =>
+      `<button data-m="${r.m}" class="${r.m === model ? "on" : ""}">${MODELS[r.m]}</button>` +
+      `<span class="track"><i style="width:${r.mae / max * 100}%"></i></span>` +
+      `<span class="n"><b>± ${fmt(r.mae)} kn</b> · ${r.bias >= 0 ? "+" : "−"}${fmt(Math.abs(r.bias))} · ${r.n} h</span>`).join("")}</div>`;
+}
+
+function renderTable(hrs, fc) {
+  const tbl = document.getElementById("tbl"), list = document.getElementById("list");
+  if (!hrs.length) { tbl.innerHTML = ""; list.innerHTML = `<div class="empty">Noch keine vollständige Stunde gemessen.</div>`; return; }
+  const days = [];
+  hrs.forEach((h, i) => { const t = new Date(h.t), key = t.toDateString();
+    if (!days.length || days.at(-1).key !== key) days.push({ key, label: dayLabel(t), n: 0, first: i });
+    days.at(-1).n++; });
+  const starts = new Set(days.slice(1).map(d => d.first)), ds = i => starts.has(i) ? " ds" : "";
+  const bar = (v, g) => { if (v == null) return ""; const c = color(v), h = Math.max(Math.min(v, 35) * 1.8, 16);
+    return `<div class="b" style="height:${h}px;background:${c}"></div>` +
+      (g != null ? `<div class="g" style="bottom:${Math.min(g, 35) * 1.8}px;background:${color(g)}"></div>` : "") +
+      `<span class="${isDark(c) ? "dk" : ""}">${Math.round(v)}</span>`; };
+  const gu = (v, i) => v == null ? `<td class="${ds(i)}"></td>` : `<td class="gu${ds(i)}" style="background:${color(v)};color:${isDark(color(v)) ? "#fff" : "#111"}">${Math.round(v)}</td>`;
+  const f = h => fc.get(h.t);
+  const diff = h => { const x = f(h); return x ? Math.round(x.wind - h.wind) : null; };
+  tbl.innerHTML =
+    `<tr class="day"><th></th>${days.map((d, i) => `<th colspan="${d.n}"${i ? ' class="ds"' : ""}>${d.label}</th>`).join("")}</tr>` +
+    `<tr><td>Uhrzeit</td>${hrs.map((h, i) => `<td class="${ds(i)}">${new Date(h.t).getHours()}h</td>`).join("")}</tr>` +
+    `<tr class="sec"><td class="lbl">Gemessen<small>Wind (kn)</small></td>${hrs.map((h, i) => `<td class="bar${ds(i)}">${bar(h.wind, h.gust)}</td>`).join("")}</tr>` +
+    `<tr><td>Böen (kn)</td>${hrs.map((h, i) => gu(h.gust, i)).join("")}</tr>` +
+    `<tr><td>Richtung</td>${hrs.map((h, i) => `<td class="${ds(i)}">${arrow(h.dir)}</td>`).join("")}</tr>` +
+    `<tr class="sec"><td class="lbl">${MODELS[model] || "Vorhersage"}<small>Wind (kn)</small></td>${hrs.map((h, i) => `<td class="bar${ds(i)}">${f(h) ? bar(f(h).wind, f(h).gust) : ""}</td>`).join("")}</tr>` +
+    `<tr><td>Böen (kn)</td>${hrs.map((h, i) => gu(f(h)?.gust, i)).join("")}</tr>` +
+    `<tr><td>Richtung</td>${hrs.map((h, i) => `<td class="${ds(i)}">${f(h) ? arrow(f(h).dir) : ""}</td>`).join("")}</tr>` +
+    `<tr class="sec"><td class="lbl">Abweichung<small>Vorhersage − Messung</small></td>${hrs.map((h, i) => { const d = diff(h);
+      return `<td class="${ds(i)}${d > 0 ? " plus" : d < 0 ? " minus" : ""}">${d == null ? "" : (d > 0 ? "+" : d < 0 ? "−" : "") + Math.abs(d)}</td>`; }).join("")}</tr>`;
+  const wrap = document.getElementById("wrap");
+  wrap.scrollLeft = wrap.scrollWidth;  // neueste Stunde rechts im Blick
+
+  // Handy: neueste Stunde zuerst
+  const cell = (v, g, dir) => { if (v == null) return `<span class="c nd">–</span>`; const c = color(v);
+    return `<span class="c${isDark(c) ? " dk" : ""}" style="background:${c}"><b>${Math.round(v)}</b>${g != null ? `<em>${Math.round(g)}</em>` : ""}${dir != null ? svgArrow(dir) : ""}</span>`; };
+  list.innerHTML = days.slice().reverse().map(d => {
+    const hs = hrs.slice(d.first, d.first + d.n).reverse();
+    return `<section class="day-card"><div class="dl">${d.label}</div>
+      <div class="row head"><span>Zeit</span><span>Gemessen</span><span>${MODELS[model] || "Vorhersage"}</span><span class="d">Δ</span></div>
+      ${hs.map(h => { const x = f(h), df = diff(h);
+        return `<div class="row"><span class="t">${new Date(h.t).getHours()}h</span>${cell(h.wind, h.gust, h.dir)}${x ? cell(x.wind, x.gust, x.dir) : cell(null)}` +
+          `<span class="d${df > 0 ? " plus" : df < 0 ? " minus" : ""}">${df == null ? "" : (df > 0 ? "+" : df < 0 ? "−" : "") + Math.abs(df)}</span></div>`; }).join("")}
+    </section>`;
+  }).join("");
+}
+
+async function init() {
+  spots = await (await fetch("data/spots.json", { cache: "no-cache" })).json();
+  const sel = document.getElementById("spot");
+  // gleiche "zuletzt genutzt"-Liste wie auf der Vorhersage-Seite
+  let recent = [];
+  try { recent = JSON.parse(localStorage.getItem("recent") || "[]"); } catch {}
+  recent = recent.filter(id => spots.some(s => s.id === id));
+  const fill = () => {
+    const rest = spots.filter(s => !recent.includes(s.id)).sort((a, b) => a.name.localeCompare(b.name, "de"));
+    const opt = s => `<option value="${s.id}">${s.name}</option>`;
+    sel.innerHTML = recent.map(id => opt(spots.find(s => s.id === id))).join("") +
+      (recent.length ? `<option disabled>──────────</option>` : "") + rest.map(opt).join("");
+  };
+  sel.onchange = () => {
+    recent = [sel.value, ...recent.filter(r => r !== sel.value)];
+    try { localStorage.setItem("recent", JSON.stringify(recent)); } catch {}
+    spot = spots.find(s => s.id === sel.value); fill(); sel.value = spot.id; load();
+  };
+  const rangeEl = document.getElementById("range");
+  const markRange = () => rangeEl.querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.h === hours));
+  rangeEl.onclick = e => { if (!e.target.dataset.h) return; hours = +e.target.dataset.h; try { localStorage.setItem("obsHours", hours); } catch {} markRange(); render(); };
+  document.addEventListener("click", e => { const b = e.target.closest("[data-m]"); if (!b) return;
+    model = b.dataset.m; try { localStorage.setItem("obsModel", model); } catch {} render(); });
+  let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(() => data && render(), 150); });
+  fill(); spot = spots.find(s => s.id === sel.value); markRange(); load();
+}
+init();
+</script>
+</body>
+</html>
