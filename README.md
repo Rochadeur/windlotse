@@ -8,7 +8,10 @@ Zusätzlich DMI HARMONIE (2 km) und ECMWF IFS (9 km) über [Open-Meteo](https://
 
 - `fetch_icon.py` lädt die neuesten Modellläufe und schreibt pro Spot und Modell eine JSON-Datei nach `web/data/`.
 - `fetch_openmeteo.py` holt DMI HARMONIE und ECMWF über die Open-Meteo-API (ein Aufruf pro Modell für alle Spots).
-- `web/index.html` ist eine statische Seite, die diese Dateien anzeigt.
+- `fetch_obs.py` holt die gemessenen 10-Minuten-Werte (Wind, Böen, Richtung, Temperatur) der nächsten DWD-Station je Spot
+  und hebt dazu die Vorhersage der vergangenen Stunden auf (`web/data/obs/<spot>.json`, 7 Tage). Den bisherigen Verlauf
+  lädt es von der veröffentlichten Seite, fehlt er, holt es die Messwerte aus den DWD-Dateien der letzten Tage nach.
+- `web/index.html` ist eine statische Seite, die diese Dateien anzeigt, `web/messwerte.html` vergleicht Messung und Vorhersage.
 - `.github/workflows/forecast.yml` führt das Skript stündlich aus und veröffentlicht `web/` auf GitHub Pages.
   Die Daten werden nicht ins Repo committet.
 
@@ -27,5 +30,6 @@ Danach unter *Actions → Vorhersage aktualisieren → Run workflow* den ersten 
 pip install -r requirements.txt
 python fetch_icon.py
 python fetch_openmeteo.py
+python fetch_obs.py
 cd web && python -m http.server 8000   # http://localhost:8000
 ```
